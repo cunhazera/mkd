@@ -85,6 +85,17 @@ md docs/api-reference.md
 
 ---
 
+### Code block
+```
+func repeatStr(s string, n int) string {
+	result := make([]byte, 0, len(s)*n)
+	for i := 0; i < n; i++ {
+		result = append(result, s...)
+	}
+	return string(result)
+}
+```
+
 ## License
 
 MIT

@@ -459,17 +459,6 @@ func renderCodeBlock(lang, code string, width int) (string, error) {
 	}
 	contentLines := rawLines[start : end+1]
 
-	// Determine panel width from the original source lines before glamour
-	// renders them. Glamour indents code content by document.margin(2) +
-	// code_block.margin(2) = 4 spaces, so we add that back.
-	const glamourIndent = 4
-	panelWidth := 0
-	for _, codeLine := range strings.Split(code, "\n") {
-		if w := xansi.StringWidth(codeLine) + glamourIndent; w > panelWidth {
-			panelWidth = w
-		}
-	}
-
 	var sb strings.Builder
 	sb.WriteString("\n")
 	for _, line := range contentLines {
@@ -477,7 +466,7 @@ func renderCodeBlock(lang, code string, width int) (string, error) {
 		// word-wrap width (e.g. "content     \x1b[0m"). TrimRight alone misses
 		// this because the string ends with the escape sequence, not a space.
 		line = trailingPaddingRe.ReplaceAllString(line, "")
-		sb.WriteString(padWithBackground(line, panelWidth) + "\n")
+		sb.WriteString(padWithBackground(line, termWidth()) + "\n")
 	}
 	sb.WriteString("\n")
 	return sb.String(), nil
