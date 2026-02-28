@@ -22,13 +22,13 @@ mkd README.md
 
 ## Install
 
-**Requirements:** Go 1.21+
-
 Via brew tap:
 ```bash
 brew tap cunhazera/tap
 brew install cunhazera/tap/mkd
 ```
+
+**Requirements:** Go 1.21+
 
 ```bash
 git clone https://github.com/gabrielcunha/mkd
