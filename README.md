@@ -3,7 +3,7 @@
 A terminal Markdown viewer with syntax highlighting, clickable links, and a clean reading experience — built with [Bubbletea](https://github.com/charmbracelet/bubbletea).
 
 ```
-mkd README.mkd
+mkd README.md
 ```
 
 ---
@@ -40,7 +40,7 @@ Or build locally without installing:
 
 ```bash
 go build -o mkd .
-./mkd README.mkd
+./mkd README.md
 ```
 
 ---
@@ -52,7 +52,7 @@ mkd <file.mkd>
 ```
 
 ```bash
-mkd README.mkd
+mkd README.md
 mkd ~/notes/todo.mkd
 mkd docs/api-reference.mkd
 ```
