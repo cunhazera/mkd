@@ -1,4 +1,4 @@
-module github.com/cunhazera/md
+module github.com/cunhazera/mkd
 
 go 1.25.6
 

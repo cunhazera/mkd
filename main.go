@@ -222,6 +222,9 @@ var linkRe = regexp.MustCompile(`\[([^\]]+)\]\(([^)]+)\)`)
 // spaces followed by a reset, so TrimRight alone is not enough.
 var trailingPaddingRe = regexp.MustCompile(`(\x1b\[[0-9;]*m| )*$`)
 
+// ansiSGRRe matches any ANSI SGR escape sequence (\x1b[...m).
+var ansiSGRRe = regexp.MustCompile(`\x1b\[([0-9;]*)m`)
+
 var (
 	inlineCodeRe = regexp.MustCompile("`([^`]+)`")
 	inlineBoldRe = regexp.MustCompile(`\*\*([^*]+)\*\*`)
@@ -420,7 +423,19 @@ const (
 // the whole line in bg-start … padding … final-reset.
 func padWithBackground(line string, width int) string {
 	vw := xansi.StringWidth(line)
-	line = strings.ReplaceAll(line, ansiReset, ansiReset+codeBlockBgANSI)
+	// Re-inject the background after any SGR sequence that performs a full
+	// reset. Chroma often emits combined sequences like \x1b[0;38;5;147m
+	// (reset + colour in one shot) which the old exact \x1b[0m replacement
+	// missed, leaving the background unset for the rest of that token.
+	line = ansiSGRRe.ReplaceAllStringFunc(line, func(seq string) string {
+		params := ansiSGRRe.FindStringSubmatch(seq)[1]
+		for _, p := range strings.Split(params, ";") {
+			if p == "0" || p == "" { // "0" = explicit reset, "" = \x1b[m bare reset
+				return seq + codeBlockBgANSI
+			}
+		}
+		return seq
+	})
 	padding := ""
 	if vw < width {
 		padding = strings.Repeat(" ", width-vw)
