@@ -1,9 +1,9 @@
-# md
+# mkd
 
 A terminal Markdown viewer with syntax highlighting, clickable links, and a clean reading experience — built with [Bubbletea](https://github.com/charmbracelet/bubbletea).
 
 ```
-md README.md
+mkd README.mkd
 ```
 
 ---
@@ -14,7 +14,7 @@ md README.md
 - **Syntax highlighted code blocks** — fenced code blocks rendered with full syntax highlighting via [Chroma](https://github.com/alecthomas/chroma), with a sensible default when no language is specified
 - **Inline code styling** — `code spans` rendered in a distinct lavender colour with a dark background
 - **Compact tables** — tables sized to their content instead of being stretched to fill the terminal width; inline code, bold and links inside cells are fully rendered
-- **Clickable links** — links open in the browser on click using [OSC 8](https://github.com/nicm/latency/blob/master/osc8.md) terminal hyperlinks (supported by iTerm2, Kitty, GNOME Terminal, Windows Terminal, and others)
+- **Clickable links** — links open in the browser on click using [OSC 8](https://github.com/nicm/latency/blob/master/osc8.mkd) terminal hyperlinks (supported by iTerm2, Kitty, GNOME Terminal, Windows Terminal, and others)
 - **Scrollable viewport** — the entire document fits in a scrollable pane that adapts to any terminal size
 - **Native mouse selection** — click and drag to select and copy any text with your terminal's native copy shortcut
 
@@ -25,12 +25,12 @@ md README.md
 **Requirements:** Go 1.21+
 
 ```bash
-git clone https://github.com/gabrielcunha/md
-cd md
+git clone https://github.com/gabrielcunha/mkd
+cd mkd
 go install .
 ```
 
-The binary is installed to `~/go/bin/md`. Make sure `~/go/bin` is in your `PATH`:
+The binary is installed to `~/go/bin/mkd`. Make sure `~/go/bin` is in your `PATH`:
 
 ```bash
 export PATH="$PATH:$(go env GOPATH)/bin"
@@ -39,8 +39,8 @@ export PATH="$PATH:$(go env GOPATH)/bin"
 Or build locally without installing:
 
 ```bash
-go build -o md .
-./md README.md
+go build -o mkd .
+./mkd README.mkd
 ```
 
 ---
@@ -48,13 +48,13 @@ go build -o md .
 ## Usage
 
 ```
-md <file.md>
+mkd <file.mkd>
 ```
 
 ```bash
-md README.md
-md ~/notes/todo.md
-md docs/api-reference.md
+mkd README.mkd
+mkd ~/notes/todo.mkd
+mkd docs/api-reference.mkd
 ```
 
 ---
