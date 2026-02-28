@@ -14,7 +14,7 @@ mkd README.md
 - **Syntax highlighted code blocks** — fenced code blocks rendered with full syntax highlighting via [Chroma](https://github.com/alecthomas/chroma), with a sensible default when no language is specified
 - **Inline code styling** — `code spans` rendered in a distinct lavender colour with a dark background
 - **Compact tables** — tables sized to their content instead of being stretched to fill the terminal width; inline code, bold and links inside cells are fully rendered
-- **Clickable links** — links open in the browser on click using [OSC 8](https://github.com/nicm/latency/blob/master/osc8.mkd) terminal hyperlinks (supported by iTerm2, Kitty, GNOME Terminal, Windows Terminal, and others)
+- **Clickable links** — links open in the browser on click using [OSC 8](https://github.com/nicm/latency/blob/master/osc8.md) terminal hyperlinks (supported by iTerm2, Kitty, GNOME Terminal, Windows Terminal, and others)
 - **Scrollable viewport** — the entire document fits in a scrollable pane that adapts to any terminal size
 - **Native mouse selection** — click and drag to select and copy any text with your terminal's native copy shortcut
 
@@ -48,13 +48,13 @@ go build -o mkd .
 ## Usage
 
 ```
-mkd <file.mkd>
+mkd <file.md>
 ```
 
 ```bash
 mkd README.md
-mkd ~/notes/todo.mkd
-mkd docs/api-reference.mkd
+mkd ~/notes/todo.md
+mkd docs/api-reference.md
 ```
 
 ---
