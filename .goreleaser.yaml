@@ -18,6 +18,8 @@ before:
 builds:
   - env:
       - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X main.version={{.Version}}
     goos:
       - linux
       - windows
@@ -37,6 +39,22 @@ archives:
     format_overrides:
       - goos: windows
         formats: [zip]
+
+brews:
+  - name: mkd
+    repository:
+      owner: cunhazera
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/cunhazera/mkd"
+    description: "A terminal markdown viewer with syntax highlighting and search"
+    license: "MIT"
+    install: |
+      bin.install "mkd"
+    test: |
+      system "#{bin}/mkd", "--version"
 
 changelog:
   sort: asc

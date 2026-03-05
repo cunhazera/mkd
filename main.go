@@ -7,10 +7,18 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// version is set at build time via -ldflags "-X main.version=x.y.z".
+var version = "dev"
+
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "Usage: mkd [--print] <file.md>")
+		fmt.Fprintln(os.Stderr, "Usage: mkd [--print|-v|--version] <file.md>")
 		os.Exit(1)
+	}
+
+	if os.Args[1] == "-v" || os.Args[1] == "--version" {
+		fmt.Println("mkd version", version)
+		return
 	}
 
 	printMode := false
