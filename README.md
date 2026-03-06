@@ -28,6 +28,11 @@ brew tap cunhazera/tap
 brew install cunhazera/tap/mkd
 ```
 
+Check its version
+```
+mkd -v (short version for --version)
+```
+
 **Requirements:** Go 1.21+
 
 ```bash
@@ -76,6 +81,7 @@ mkd docs/api-reference.md
 | `g` | Go to top |
 | `G` | Go to bottom |
 | `q` / `esc` / `ctrl+c` | Quit |
+| `/` | Search |
 
 ---
 
