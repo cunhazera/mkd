@@ -58,9 +58,14 @@ func main() {
 		filename: filename,
 	}
 
-	p := tea.NewProgram(m, tea.WithAltScreen())
+	// WithMouseCellMotion enables Bubbletea's mouse parser. Init() then
+	// immediately downgrades the terminal to ?1000h (basic buttons only),
+	// which preserves native text selection without requiring Shift.
+	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+	// Bubbletea's cleanup disables ?1002h but not ?1000h; do it here.
+	fmt.Print("\x1b[?1000l")
 }

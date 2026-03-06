@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -18,21 +19,15 @@ func scrollTick() tea.Cmd {
 	})
 }
 
-// addScroll accumulates a scroll delta into m and returns a tick command when
-// a new tick needs to be scheduled. Scrolling in the opposite direction cancels
-// any pending scroll.
-func addScroll(m *model, delta int) tea.Cmd {
-	if delta > 0 && m.scrollAcc < 0 {
-		m.scrollAcc = 0
-	} else if delta < 0 && m.scrollAcc > 0 {
-		m.scrollAcc = 0
+// enableBasicMouse downgrades the terminal from cell-motion mouse mode
+// (?1002h, captures drag) to basic button mode (?1000h, captures clicks and
+// scroll wheel only). Drag events are not captured, so the terminal handles
+// them natively — text selection works without holding Shift.
+func enableBasicMouse() tea.Cmd {
+	return func() tea.Msg {
+		os.Stdout.WriteString("\x1b[?1002l\x1b[?1000h")
+		return nil
 	}
-	m.scrollAcc += delta
-	if !m.scrollPending && m.scrollAcc != 0 {
-		m.scrollPending = true
-		return scrollTick()
-	}
-	return nil
 }
 
 type model struct {
@@ -45,12 +40,12 @@ type model struct {
 	searchQuery   string // last confirmed query
 	matches       []int  // line indices containing matches
 	matchIdx      int    // current position in matches
-	scrollAcc     int    // pending scroll lines (positive=down, negative=up)
+	scrollAcc     int    // pending mouse-wheel lines (positive=down, negative=up)
 	scrollPending bool   // a scrollTick is already in flight
 }
 
 func (m model) Init() tea.Cmd {
-	return nil
+	return enableBasicMouse()
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -71,6 +66,38 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.viewport, cmd = m.viewport.Update(msg)
 		return m, cmd
+
+	case tea.MouseMsg:
+		if msg.Action == tea.MouseActionPress {
+			switch msg.Button {
+			case tea.MouseButtonWheelDown:
+				if m.scrollAcc < 0 {
+					m.scrollAcc = 0 // cancel pending up-scroll
+				}
+				m.scrollAcc += 3
+			case tea.MouseButtonWheelUp:
+				if m.scrollAcc > 0 {
+					m.scrollAcc = 0 // cancel pending down-scroll
+				}
+				m.scrollAcc -= 3
+			}
+			if !m.scrollPending && m.scrollAcc != 0 {
+				m.scrollPending = true
+				return m, scrollTick()
+			}
+		}
+		return m, nil
+
+	case scrollTickMsg:
+		m.scrollPending = false
+		acc := m.scrollAcc
+		m.scrollAcc = 0
+		if acc > 0 {
+			m.viewport.LineDown(acc)
+		} else if acc < 0 {
+			m.viewport.LineUp(-acc)
+		}
+		return m, nil
 
 	case tea.KeyMsg:
 		// Search input mode — capture all keys for the query
@@ -104,7 +131,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		// Normal navigation mode — all keys handled here, never forwarded to viewport
+		// Normal navigation mode
 		switch msg.Type {
 		case tea.KeyCtrlC:
 			return m, tea.Quit
@@ -118,13 +145,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 			}
 		case tea.KeyUp:
-			return m, addScroll(&m,-1)
+			m.viewport.LineUp(1)
 		case tea.KeyDown:
-			return m, addScroll(&m,1)
+			m.viewport.LineDown(1)
 		case tea.KeyPgUp:
-			return m, addScroll(&m,-m.viewport.Height)
+			m.viewport.LineUp(m.viewport.Height)
 		case tea.KeyPgDown:
-			return m, addScroll(&m,m.viewport.Height)
+			m.viewport.LineDown(m.viewport.Height)
 		case tea.KeyRunes:
 			switch string(msg.Runes) {
 			case "q", "Q":
@@ -147,37 +174,22 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.viewport.SetYOffset(line)
 				}
 			case "g":
-				m.scrollAcc = 0
-				m.scrollPending = false
 				m.viewport.GotoTop()
 			case "G":
-				m.scrollAcc = 0
-				m.scrollPending = false
 				m.viewport.GotoBottom()
 			case "k":
-				return m, addScroll(&m,-1)
+				m.viewport.LineUp(1)
 			case "j":
-				return m, addScroll(&m,1)
+				m.viewport.LineDown(1)
 			case "l":
-				return m, addScroll(&m,15)
+				m.viewport.LineDown(15)
 			case "p":
-				return m, addScroll(&m,-15)
+				m.viewport.LineUp(15)
 			case "f":
-				return m, addScroll(&m,m.viewport.Height)
+				m.viewport.LineDown(m.viewport.Height)
 			case "b":
-				return m, addScroll(&m,-m.viewport.Height)
+				m.viewport.LineUp(m.viewport.Height)
 			}
-		}
-		return m, nil
-
-	case scrollTickMsg:
-		m.scrollPending = false
-		acc := m.scrollAcc
-		m.scrollAcc = 0
-		if acc > 0 {
-			m.viewport.LineDown(acc)
-		} else if acc < 0 {
-			m.viewport.LineUp(-acc)
 		}
 		return m, nil
 	}
