@@ -4,21 +4,49 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+type scrollTickMsg struct{}
+
+func scrollTick() tea.Cmd {
+	return tea.Tick(16*time.Millisecond, func(time.Time) tea.Msg {
+		return scrollTickMsg{}
+	})
+}
+
+// addScroll accumulates a scroll delta into m and returns a tick command when
+// a new tick needs to be scheduled. Scrolling in the opposite direction cancels
+// any pending scroll.
+func addScroll(m *model, delta int) tea.Cmd {
+	if delta > 0 && m.scrollAcc < 0 {
+		m.scrollAcc = 0
+	} else if delta < 0 && m.scrollAcc > 0 {
+		m.scrollAcc = 0
+	}
+	m.scrollAcc += delta
+	if !m.scrollPending && m.scrollAcc != 0 {
+		m.scrollPending = true
+		return scrollTick()
+	}
+	return nil
+}
+
 type model struct {
-	viewport    viewport.Model
-	content     string
-	filename    string
-	ready       bool
-	searching   bool   // user is typing a query
-	searchInput string // query being typed
-	searchQuery string // last confirmed query
-	matches     []int  // line indices containing matches
-	matchIdx    int    // current position in matches
+	viewport      viewport.Model
+	content       string
+	filename      string
+	ready         bool
+	searching     bool   // user is typing a query
+	searchInput   string // query being typed
+	searchQuery   string // last confirmed query
+	matches       []int  // line indices containing matches
+	matchIdx      int    // current position in matches
+	scrollAcc     int    // pending scroll lines (positive=down, negative=up)
+	scrollPending bool   // a scrollTick is already in flight
 }
 
 func (m model) Init() tea.Cmd {
@@ -90,13 +118,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 			}
 		case tea.KeyUp:
-			m.viewport.LineUp(1)
+			return m, addScroll(&m,-1)
 		case tea.KeyDown:
-			m.viewport.LineDown(1)
+			return m, addScroll(&m,1)
 		case tea.KeyPgUp:
-			m.viewport.LineUp(m.viewport.Height)
+			return m, addScroll(&m,-m.viewport.Height)
 		case tea.KeyPgDown:
-			m.viewport.LineDown(m.viewport.Height)
+			return m, addScroll(&m,m.viewport.Height)
 		case tea.KeyRunes:
 			switch string(msg.Runes) {
 			case "q", "Q":
@@ -119,22 +147,37 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.viewport.SetYOffset(line)
 				}
 			case "g":
+				m.scrollAcc = 0
+				m.scrollPending = false
 				m.viewport.GotoTop()
 			case "G":
+				m.scrollAcc = 0
+				m.scrollPending = false
 				m.viewport.GotoBottom()
 			case "k":
-				m.viewport.LineUp(1)
+				return m, addScroll(&m,-1)
 			case "j":
-				m.viewport.LineDown(1)
+				return m, addScroll(&m,1)
 			case "l":
-				m.viewport.LineDown(15)
+				return m, addScroll(&m,15)
 			case "p":
-				m.viewport.LineUp(15)
+				return m, addScroll(&m,-15)
 			case "f":
-				m.viewport.LineDown(m.viewport.Height)
+				return m, addScroll(&m,m.viewport.Height)
 			case "b":
-				m.viewport.LineUp(m.viewport.Height)
+				return m, addScroll(&m,-m.viewport.Height)
 			}
+		}
+		return m, nil
+
+	case scrollTickMsg:
+		m.scrollPending = false
+		acc := m.scrollAcc
+		m.scrollAcc = 0
+		if acc > 0 {
+			m.viewport.LineDown(acc)
+		} else if acc < 0 {
+			m.viewport.LineUp(-acc)
 		}
 		return m, nil
 	}
