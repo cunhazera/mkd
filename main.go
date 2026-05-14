@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // version is set at build time via -ldflags "-X main.version=x.y.z".
@@ -58,9 +58,13 @@ func main() {
 		filename: filename,
 	}
 
-	p := tea.NewProgram(m, tea.WithAltScreen())
+	// AltScreen and mouse mode are declared in View() — no program options needed.
+	// Init() downgrades mouse from ?1002h to ?1000h to preserve native text selection.
+	p := tea.NewProgram(m)
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+	// v2 disables ?1002h on exit but not ?1000h (which Init() enabled); clean up here.
+	fmt.Print("\x1b[?1000l")
 }

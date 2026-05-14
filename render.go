@@ -19,6 +19,10 @@ var trailingPaddingRe = regexp.MustCompile(`(\x1b\[[0-9;]*m| )*$`)
 // ansiSGRRe matches any ANSI SGR escape sequence (\x1b[...m).
 var ansiSGRRe = regexp.MustCompile(`\x1b\[([0-9;]*)m`)
 
+// brTagRe matches HTML line-break tags, optionally followed by the newline
+// they sit on (to avoid a double-newline when <br> is at end of a line).
+var brTagRe = regexp.MustCompile(`(?i)<br\s*/?>\n?`)
+
 func termWidth() int {
 	w, _, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil || w == 0 {
@@ -156,11 +160,18 @@ func renderMarkdown(content string, width int) (string, error) {
 	// touches the content. extractTables and extractLinks never see them.
 	content, codeBlocks := extractCodeBlocks(content, width)
 	content, tables := extractTables(content)
+
+	// Convert HTML line-break tags to newlines so glamour renders them as
+	// hard breaks. Must run after code/table extraction so it doesn't affect
+	// content inside those blocks.
+	content = brTagRe.ReplaceAllString(content, "\n")
+
 	processed, links := extractLinks(content)
 
 	renderer, err := glamour.NewTermRenderer(
 		glamour.WithStylesFromJSONBytes(glamourTheme),
 		glamour.WithWordWrap(width),
+		glamour.WithPreservedNewLines(),
 	)
 	if err != nil {
 		return "", err

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
-	ltable "github.com/charmbracelet/lipgloss/table"
+	"charm.land/lipgloss/v2"
+	ltable "charm.land/lipgloss/v2/table"
 )
 
 // isTableRow returns true if line looks like a markdown table row (| ... |).
