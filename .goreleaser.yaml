@@ -40,21 +40,19 @@ archives:
       - goos: windows
         formats: [zip]
 
-brews:
-  - name: mkd
-    repository:
-      owner: cunhazera
-      name: homebrew-tap
-      branch: main
-      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    directory: Formula
-    homepage: "https://github.com/cunhazera/mkd"
-    description: "A terminal markdown viewer with syntax highlighting and search"
-    license: "MIT"
-    install: |
-      bin.install "mkd"
-    test: |
-      system "#{bin}/mkd", "--version"
+homebrew_casks:
+  - name: foo
+    directory: Casks
+
+    url:
+      verified: github.com/cunhazera/mkd
+
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/mkd"]
+          end
 
 changelog:
   sort: asc
