@@ -2,50 +2,27 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 )
-
-type scrollTickMsg struct{}
-
-func scrollTick() tea.Cmd {
-	return tea.Tick(16*time.Millisecond, func(time.Time) tea.Msg {
-		return scrollTickMsg{}
-	})
-}
-
-// enableBasicMouse downgrades the terminal from cell-motion mouse mode
-// (?1002h, captures drag) to basic button mode (?1000h, captures clicks and
-// scroll wheel only). Drag events are not captured, so the terminal handles
-// them natively — text selection works without holding Shift.
-func enableBasicMouse() tea.Cmd {
-	return func() tea.Msg {
-		os.Stdout.WriteString("\x1b[?1002l\x1b[?1000h")
-		return nil
-	}
-}
 
 type model struct {
 	viewport      viewport.Model
 	content       string
 	filename      string
 	ready         bool
-	searching     bool   // user is typing a query
-	searchInput   string // query being typed
-	searchQuery   string // last confirmed query
-	matches       []int  // line indices containing matches
-	matchIdx      int    // current position in matches
-	scrollAcc     int    // pending mouse-wheel lines (positive=down, negative=up)
-	scrollPending bool   // a scrollTick is already in flight
+	searching   bool   // user is typing a query
+	searchInput string // query being typed
+	searchQuery string // last confirmed query
+	matches     []int  // line indices containing matches
+	matchIdx    int    // current position in matches
 }
 
 func (m model) Init() tea.Cmd {
-	return enableBasicMouse()
+	return nil
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -73,30 +50,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.MouseWheelMsg:
 		switch msg.Button {
 		case tea.MouseWheelDown:
-			if m.scrollAcc < 0 {
-				m.scrollAcc = 0 // cancel pending up-scroll
-			}
-			m.scrollAcc += 3
+			m.viewport.ScrollDown(3)
 		case tea.MouseWheelUp:
-			if m.scrollAcc > 0 {
-				m.scrollAcc = 0 // cancel pending down-scroll
-			}
-			m.scrollAcc -= 3
-		}
-		if !m.scrollPending && m.scrollAcc != 0 {
-			m.scrollPending = true
-			return m, scrollTick()
-		}
-		return m, nil
-
-	case scrollTickMsg:
-		m.scrollPending = false
-		acc := m.scrollAcc
-		m.scrollAcc = 0
-		if acc > 0 {
-			m.viewport.ScrollDown(acc)
-		} else if acc < 0 {
-			m.viewport.ScrollUp(-acc)
+			m.viewport.ScrollUp(3)
 		}
 		return m, nil
 
