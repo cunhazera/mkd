@@ -4,25 +4,43 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 )
+
+type scrollTickMsg struct{}
+
+func scrollTick() tea.Cmd {
+	return tea.Tick(8*time.Millisecond, func(time.Time) tea.Msg {
+		return scrollTickMsg{}
+	})
+}
 
 type model struct {
 	viewport      viewport.Model
 	content       string
 	filename      string
 	ready         bool
-	searching   bool   // user is typing a query
-	searchInput string // query being typed
-	searchQuery string // last confirmed query
-	matches     []int  // line indices containing matches
-	matchIdx    int    // current position in matches
+	searching     bool
+	searchInput   string
+	searchQuery   string
+	matches       []int
+	matchIdx      int
+	scrollAcc     int  // pending wheel lines (positive=down, negative=up)
+	scrollPending bool // a scrollTick is in flight
+	vpView        string // cached viewport.View() — recomputed only on position change
 }
 
 func (m model) Init() tea.Cmd {
 	return nil
+}
+
+// refreshVP re-renders the viewport into m.vpView. Call after any operation
+// that changes the viewport's scroll position or content.
+func (m *model) refreshVP() {
+	m.vpView = m.viewport.View()
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -45,19 +63,44 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewport.SetHeight(msg.Height - verticalSpace)
 		}
 		m.viewport, cmd = m.viewport.Update(msg)
+		m.refreshVP()
 		return m, cmd
 
 	case tea.MouseWheelMsg:
 		switch msg.Button {
 		case tea.MouseWheelDown:
-			m.viewport.ScrollDown(3)
+			if m.scrollAcc < 0 {
+				m.scrollAcc = 0
+			}
+			m.scrollAcc += 3
 		case tea.MouseWheelUp:
-			m.viewport.ScrollUp(3)
+			if m.scrollAcc > 0 {
+				m.scrollAcc = 0
+			}
+			m.scrollAcc -= 3
 		}
+		if !m.scrollPending && m.scrollAcc != 0 {
+			m.scrollPending = true
+			return m, scrollTick()
+		}
+		// vpView intentionally NOT updated here — reuse the cache so the
+		// event loop avoids an expensive lipgloss re-render on every wheel
+		// event that hasn't been applied to the viewport yet.
+		return m, nil
+
+	case scrollTickMsg:
+		m.scrollPending = false
+		acc := m.scrollAcc
+		m.scrollAcc = 0
+		if acc > 0 {
+			m.viewport.ScrollDown(acc)
+		} else if acc < 0 {
+			m.viewport.ScrollUp(-acc)
+		}
+		m.refreshVP()
 		return m, nil
 
 	case tea.KeyPressMsg:
-		// Search input mode — capture all keys for the query
 		if m.searching {
 			switch msg.String() {
 			case "ctrl+c":
@@ -74,6 +117,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					line := m.matches[0]
 					m.viewport.SetContent(applyHighlights(m.content, m.searchQuery, m.matches, line))
 					m.viewport.SetYOffset(line)
+					m.refreshVP()
 				}
 			case "backspace":
 				if len(m.searchInput) > 0 {
@@ -90,7 +134,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		// Normal navigation mode
 		switch msg.String() {
 		case "ctrl+c":
 			return m, tea.Quit
@@ -100,17 +143,22 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.matches = nil
 				m.matchIdx = 0
 				m.viewport.SetContent(m.content)
+				m.refreshVP()
 			} else {
 				return m, tea.Quit
 			}
 		case "up":
 			m.viewport.ScrollUp(1)
+			m.refreshVP()
 		case "down":
 			m.viewport.ScrollDown(1)
+			m.refreshVP()
 		case "pgup":
 			m.viewport.ScrollUp(m.viewport.Height())
+			m.refreshVP()
 		case "pgdown":
 			m.viewport.ScrollDown(m.viewport.Height())
+			m.refreshVP()
 		case "q", "Q":
 			return m, tea.Quit
 		case "/":
@@ -122,6 +170,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				line := m.matches[m.matchIdx]
 				m.viewport.SetContent(applyHighlights(m.content, m.searchQuery, m.matches, line))
 				m.viewport.SetYOffset(line)
+				m.refreshVP()
 			}
 		case "N":
 			if len(m.matches) > 0 {
@@ -129,23 +178,32 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				line := m.matches[m.matchIdx]
 				m.viewport.SetContent(applyHighlights(m.content, m.searchQuery, m.matches, line))
 				m.viewport.SetYOffset(line)
+				m.refreshVP()
 			}
 		case "g":
 			m.viewport.GotoTop()
+			m.refreshVP()
 		case "G":
 			m.viewport.GotoBottom()
+			m.refreshVP()
 		case "k":
 			m.viewport.ScrollUp(1)
+			m.refreshVP()
 		case "j":
 			m.viewport.ScrollDown(1)
+			m.refreshVP()
 		case "l":
 			m.viewport.ScrollDown(15)
+			m.refreshVP()
 		case "p":
 			m.viewport.ScrollUp(15)
+			m.refreshVP()
 		case "f":
 			m.viewport.ScrollDown(m.viewport.Height())
+			m.refreshVP()
 		case "b":
 			m.viewport.ScrollUp(m.viewport.Height())
+			m.refreshVP()
 		}
 		return m, nil
 	}
@@ -184,7 +242,7 @@ func (m model) View() tea.View {
 			))
 		}
 
-		content = fmt.Sprintf("%s\n%s\n%s\n%s", title, divider, m.viewport.View(), footer)
+		content = fmt.Sprintf("%s\n%s\n%s\n%s", title, divider, m.vpView, footer)
 	}
 
 	v := tea.NewView(content)
