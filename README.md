@@ -22,10 +22,18 @@ mkd README.md
 
 ## Install
 
-Via brew tap:
+Via brew tap (cask):
 ```bash
-brew tap cunhazera/tap
-brew install cunhazera/tap/mkd
+brew install --cask cunhazera/tap/mkd
+```
+
+### Migrating from v0.3.2
+
+If you installed `mkd` as a formula (v0.3.2), you need to remove it first and reinstall as a cask:
+
+```bash
+brew uninstall --formula mkd
+brew install --cask cunhazera/tap/mkd
 ```
 
 Check its version
