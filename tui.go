@@ -2,39 +2,41 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 )
 
-type scrollTickMsg struct{}
-
-func scrollTick() tea.Cmd {
-	return tea.Tick(8*time.Millisecond, func(time.Time) tea.Msg {
-		return scrollTickMsg{}
-	})
+// enableAltScroll enables alternate-scroll mode (?1007h). In alt-screen mode
+// the terminal converts scroll-wheel events into cursor-up/down key sequences,
+// so bubbletea receives them as KeyPressMsg "up"/"down" without any mouse
+// reporting being active. No mouse capture means text selection and OSC 8
+// hyperlink clicks are handled natively by the terminal emulator.
+func enableAltScroll() tea.Cmd {
+	return func() tea.Msg {
+		os.Stdout.WriteString("\x1b[?1007h")
+		return nil
+	}
 }
 
 type model struct {
-	viewport      viewport.Model
-	content       string
-	filename      string
-	ready         bool
-	searching     bool
-	searchInput   string
-	searchQuery   string
-	matches       []int
-	matchIdx      int
-	scrollAcc     int  // pending wheel lines (positive=down, negative=up)
-	scrollPending bool // a scrollTick is in flight
-	vpView        string // cached viewport.View() — recomputed only on position change
+	viewport    viewport.Model
+	content     string
+	filename    string
+	ready       bool
+	searching   bool
+	searchInput string
+	searchQuery string
+	matches     []int
+	matchIdx    int
+	vpView      string // cached viewport.View() — recomputed only on position change
 }
 
 func (m model) Init() tea.Cmd {
-	return nil
+	return enableAltScroll()
 }
 
 // refreshVP re-renders the viewport into m.vpView. Call after any operation
@@ -65,40 +67,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport, cmd = m.viewport.Update(msg)
 		m.refreshVP()
 		return m, cmd
-
-	case tea.MouseWheelMsg:
-		switch msg.Button {
-		case tea.MouseWheelDown:
-			if m.scrollAcc < 0 {
-				m.scrollAcc = 0
-			}
-			m.scrollAcc += 3
-		case tea.MouseWheelUp:
-			if m.scrollAcc > 0 {
-				m.scrollAcc = 0
-			}
-			m.scrollAcc -= 3
-		}
-		if !m.scrollPending && m.scrollAcc != 0 {
-			m.scrollPending = true
-			return m, scrollTick()
-		}
-		// vpView intentionally NOT updated here — reuse the cache so the
-		// event loop avoids an expensive lipgloss re-render on every wheel
-		// event that hasn't been applied to the viewport yet.
-		return m, nil
-
-	case scrollTickMsg:
-		m.scrollPending = false
-		acc := m.scrollAcc
-		m.scrollAcc = 0
-		if acc > 0 {
-			m.viewport.ScrollDown(acc)
-		} else if acc < 0 {
-			m.viewport.ScrollUp(-acc)
-		}
-		m.refreshVP()
-		return m, nil
 
 	case tea.KeyPressMsg:
 		if m.searching {
@@ -247,6 +215,6 @@ func (m model) View() tea.View {
 
 	v := tea.NewView(content)
 	v.AltScreen = true
-	v.MouseMode = tea.MouseModeCellMotion
+	v.MouseMode = tea.MouseModeNone
 	return v
 }
