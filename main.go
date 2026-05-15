@@ -59,12 +59,11 @@ func main() {
 	}
 
 	// AltScreen and mouse mode are declared in View() — no program options needed.
-	// Init() downgrades mouse from ?1002h to ?1000h to preserve native text selection.
+	// Init() enables ?1007h (alternate scroll); clean it up on exit.
 	p := tea.NewProgram(m)
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
-	// v2 disables ?1002h on exit but not ?1000h (which Init() enabled); clean up here.
-	fmt.Print("\x1b[?1000l")
+	fmt.Print("\x1b[?1007l")
 }
