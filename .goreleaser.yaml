@@ -41,12 +41,15 @@ archives:
         formats: [zip]
 
 homebrew_casks:
-  - name: foo
+  - name: mkd
+    repository:
+      owner: cunhazera
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     directory: Casks
-
     url:
       verified: github.com/cunhazera/mkd
-
     hooks:
       post:
         install: |
