@@ -1,10 +1,17 @@
-# mkd
+<p align="center">
+  <img src="logo.svg" alt="mkd" width="120" />
+</p>
 
-A terminal Markdown viewer with syntax highlighting, clickable links, and a clean reading experience — built with [Bubbletea](https://github.com/charmbracelet/bubbletea).
+<p align="center">
+  A terminal Markdown viewer with syntax highlighting, clickable links, and a clean reading experience.
+</p>
 
-```
-mkd README.md
-```
+<p align="center">
+  <a href="#install">Install</a> &nbsp;·&nbsp;
+  <a href="#usage">Usage</a> &nbsp;·&nbsp;
+  <a href="#keyboard-shortcuts">Shortcuts</a> &nbsp;·&nbsp;
+  <a href="#license">License</a>
+</p>
 
 ---
 

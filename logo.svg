@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- background -->
+  <rect width="512" height="512" fill="#0d1017"/>
+
+  <!-- subtle purple bloom behind the "d" -->
+  <radialGradient id="bloom" cx="72%" cy="50%" r="45%">
+    <stop offset="0%" stop-color="#7c3aed" stop-opacity="0.18"/>
+    <stop offset="100%" stop-color="#7c3aed" stop-opacity="0"/>
+  </radialGradient>
+  <rect width="512" height="512" fill="url(#bloom)"/>
+
+  <!-- logotype -->
+  <text
+    x="256" y="256"
+    font-family="'JetBrains Mono', 'Fira Code', ui-monospace, monospace"
+    font-size="172"
+    font-weight="700"
+    text-anchor="middle"
+    dominant-baseline="central"
+    letter-spacing="-4">
+    <tspan fill="#ffffff">mk</tspan><tspan fill="#a78bfa">d</tspan>
+  </text>
+</svg>
