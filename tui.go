@@ -5,10 +5,19 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 )
+
+type scrollTickMsg struct{}
+
+func scrollTick() tea.Cmd {
+	return tea.Tick(8*time.Millisecond, func(time.Time) tea.Msg {
+		return scrollTickMsg{}
+	})
+}
 
 // enableAltScroll enables alternate-scroll mode (?1007h). In alt-screen mode
 // the terminal converts scroll-wheel events into cursor-up/down key sequences,
@@ -23,16 +32,18 @@ func enableAltScroll() tea.Cmd {
 }
 
 type model struct {
-	viewport    viewport.Model
-	content     string
-	filename    string
-	ready       bool
-	searching   bool
-	searchInput string
-	searchQuery string
-	matches     []int
-	matchIdx    int
-	vpView      string // cached viewport.View() — recomputed only on position change
+	viewport      viewport.Model
+	content       string
+	filename      string
+	ready         bool
+	searching     bool
+	searchInput   string
+	searchQuery   string
+	matches       []int
+	matchIdx      int
+	scrollAcc     int  // pending scroll lines from wheel events (+ = down, - = up)
+	scrollPending bool // a scrollTick is already in flight
+	vpView        string // cached viewport.View() — recomputed only on position change
 }
 
 func (m model) Init() tea.Cmd {
@@ -67,6 +78,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport, cmd = m.viewport.Update(msg)
 		m.refreshVP()
 		return m, cmd
+
+	case scrollTickMsg:
+		m.scrollPending = false
+		if m.scrollAcc > 0 {
+			m.viewport.ScrollDown(m.scrollAcc)
+		} else if m.scrollAcc < 0 {
+			m.viewport.ScrollUp(-m.scrollAcc)
+		}
+		m.scrollAcc = 0
+		m.refreshVP()
+		return m, nil
 
 	case tea.KeyPressMsg:
 		if m.searching {
@@ -116,11 +138,25 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 			}
 		case "up":
-			m.viewport.ScrollUp(1)
-			m.refreshVP()
+			if m.scrollAcc > 0 {
+				m.scrollAcc = 0
+			}
+			m.scrollAcc--
+			if !m.scrollPending {
+				m.scrollPending = true
+				return m, scrollTick()
+			}
+			return m, nil
 		case "down":
-			m.viewport.ScrollDown(1)
-			m.refreshVP()
+			if m.scrollAcc < 0 {
+				m.scrollAcc = 0
+			}
+			m.scrollAcc++
+			if !m.scrollPending {
+				m.scrollPending = true
+				return m, scrollTick()
+			}
+			return m, nil
 		case "pgup":
 			m.viewport.ScrollUp(m.viewport.Height())
 			m.refreshVP()
