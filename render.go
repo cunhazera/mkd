@@ -167,6 +167,7 @@ func renderMarkdown(content string, width int) (string, error) {
 	content = brTagRe.ReplaceAllString(content, "\n")
 
 	processed, links := extractLinks(content)
+	processed, autoLinks := extractAutoLinks(processed)
 
 	renderer, err := glamour.NewTermRenderer(
 		glamour.WithStylesFromJSONBytes(glamourTheme),
@@ -183,6 +184,7 @@ func renderMarkdown(content string, width int) (string, error) {
 	}
 
 	rendered = restoreLinks(rendered, links)
+	rendered = restoreAutoLinks(rendered, autoLinks)
 	rendered = restoreTables(rendered, tables)
 	rendered = restoreCodeBlocks(rendered, codeBlocks)
 	return rendered, nil
