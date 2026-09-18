@@ -125,9 +125,15 @@ func extractCodeBlocks(content string, width int) (string, []string) {
 			fence = append(fence, line)
 
 			code := strings.Join(fence[1:len(fence)-1], "\n")
-			rendered, err := renderCodeBlock(lang, code, width)
-			if err != nil {
-				rendered = strings.Join(fence, "\n") + "\n"
+			var rendered string
+			if lang == "mermaid" {
+				rendered = renderMermaidBlock(code, width)
+			} else {
+				var err error
+				rendered, err = renderCodeBlock(lang, code, width)
+				if err != nil {
+					rendered = strings.Join(fence, "\n") + "\n"
+				}
 			}
 
 			idx := len(blocks)

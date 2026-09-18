@@ -41,8 +41,8 @@ type model struct {
 	searchQuery   string
 	matches       []int
 	matchIdx      int
-	scrollAcc     int  // pending scroll lines from wheel events (+ = down, - = up)
-	scrollPending bool // a scrollTick is already in flight
+	scrollAcc     int    // pending scroll lines from wheel events (+ = down, - = up)
+	scrollPending bool   // a scrollTick is already in flight
 	vpView        string // cached viewport.View() — recomputed only on position change
 }
 
@@ -88,6 +88,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.scrollAcc = 0
 		m.refreshVP()
+		return m, nil
+
+	case tea.PasteMsg:
+		if m.searching {
+			m.searchInput += msg.Content
+		}
 		return m, nil
 
 	case tea.KeyPressMsg:
